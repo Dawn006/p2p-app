@@ -15,45 +15,51 @@ st.header("📊 Live Binance P2P Rate (MMK/USDT)")
 
 if st.button("Live Rate ကြည့်မည်"):
     try:
-        # Binance ဆီကို လှမ်းတောင်းမည့် လိပ်စာ (API endpoint)
+        # Binance ဆီကို လှမ်းတောင်းမည့် လိပ်စာ
         url = "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search"
         
-        # လုံခြုံရေးတံခါးကို ဖြတ်ဖို့ (လူအစစ်ပါလို့ ဟန်ဆောင်ခြင်း)
+        # လုံခြုံရေးတံခါးကို ဖြတ်ဖို့ (Browser အစစ်နဲ့ ပိုတူအောင် အချက်အလက်များ ထပ်ဖြည့်ထားသည်)
         headers = {
-            "Accept": "*/*",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": "en-US,en;q=0.5",
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Content-Length": "123",
+            "authority": "p2p.binance.com",
+            "accept": "application/json, text/plain, */*",
+            "accept-language": "en-US,en;q=0.9",
             "content-type": "application/json",
-            "Host": "p2p.binance.com",
-            "Origin": "https://p2p.binance.com",
-            "Pragma": "no-cache",
-            "TE": "Trailers",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36"
+            "origin": "https://p2p.binance.com",
+            "referer": "https://p2p.binance.com/en/trade/all-payments/USDT?fiat=MMK",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
         }
         
-        # ငါတို့ လိုချင်တဲ့ အချက်အလက် (USDT ကို MMK နဲ့ ဝယ်မယ်)
+        # အချက်အလက် ပိုစုံအောင် ပြင်ထားပါသည် (ပထမဆုံး BUY ဖြင့် ရှာမည်)
         data = {
-            "asset": "USDT",
             "fiat": "MMK",
-            "tradeType": "BUY",
             "page": 1,
             "rows": 5,
+            "tradeType": "BUY",
+            "asset": "USDT",
+            "countries": [],
+            "proMerchantAds": False,
+            "shieldMerchantAds": False,
+            "filterPicker": [],
             "payTypes": [],
-            "publisherType": None
+            "classifies": ["mass", "profession", "tier1", "tier2"]
         }
         
         # requests ကို သုံးပြီး သွားမေးခြင်း
         response = requests.post(url, headers=headers, json=data)
         result = response.json()
         
-
-        # ရလာတဲ့ ဒေတာတွေကို ဖော်ပြခြင်း
-        if result['code'] == '000000':
-            sellers = result['data']
+        # ရလာတဲ့ ဒေတာတွေကို စစ်ဆေးခြင်း
+        if result.get('code') == '000000':
+            sellers = result.get('data', [])
             
+            # အကယ်၍ BUY နဲ့ ရှာလို့ စာရင်းအလွတ်ဖြစ်နေပါက SELL ဖြင့် အလိုအလျောက် ပြောင်းရှာမည်
+            if len(sellers) == 0:
+                data["tradeType"] = "SELL"
+                response = requests.post(url, headers=headers, json=data)
+                result = response.json()
+                sellers = result.get('data', [])
+
+            # နောက်ဆုံးရလာမည့် ဒေတာကို ဖော်ပြခြင်း
             if len(sellers) > 0:
                 st.success("✅ လက်ရှိ ပေါက်ဈေးများ ရရှိပါပြီ!")
                 for index, seller in enumerate(sellers):
@@ -61,12 +67,12 @@ if st.button("Live Rate ကြည့်မည်"):
                     name = seller['advertiser']['nickName']
                     st.write(f"{index + 1}. **{name}** : `{price}` MMK")
             else:
-                st.warning("⚠️ Binance နှင့် ချိတ်ဆက်မိသော်လည်း လောလောဆယ် ဈေးတင်ထားသူ မတွေ့ပါ။")
+                st.warning("⚠️ Binance ဘက်မှ လောလောဆယ် ဒေတာများ ပိတ်ထားပါသည်။ (Streamlit Cloud ၏ IP ကို လက်မခံခြင်း ဖြစ်နိုင်ပါသည်)")
         else:
             st.error("Rate ယူရာတွင် အခက်အခဲရှိနေပါသည်။")
             
     except Exception as e:
-        st.warning(f"Connection Error: လောလောဆယ် လှမ်းယူ၍ မရပါ။ (Binance မှ ပိတ်ထားနိုင်ပါသည်) {e}")
+        st.warning(f"Connection Error: {e}")
 
 st.divider()
 
