@@ -38,9 +38,9 @@ if st.button("Live Rate ကြည့်မည်"):
         data = {
             "asset": "USDT",
             "fiat": "MMK",
-            "tradeType": "SELL",
+            "tradeType": "BUY",
             "page": 1,
-            "rows": 3,
+            "rows": 5,
             "payTypes": [],
             "publisherType": None
         }
@@ -49,15 +49,19 @@ if st.button("Live Rate ကြည့်မည်"):
         response = requests.post(url, headers=headers, json=data)
         result = response.json()
         
+
         # ရလာတဲ့ ဒေတာတွေကို ဖော်ပြခြင်း
         if result['code'] == '000000':
             sellers = result['data']
-            st.success("✅ လက်ရှိ ပေါက်ဈေးများ ရရှိပါပြီ!")
             
-            for index, seller in enumerate(sellers):
-                price = seller['adv']['price']
-                name = seller['advertiser']['nickName']
-                st.write(f"{index + 1}. **{name}** : `{price}` MMK")
+            if len(sellers) > 0:
+                st.success("✅ လက်ရှိ ပေါက်ဈေးများ ရရှိပါပြီ!")
+                for index, seller in enumerate(sellers):
+                    price = seller['adv']['price']
+                    name = seller['advertiser']['nickName']
+                    st.write(f"{index + 1}. **{name}** : `{price}` MMK")
+            else:
+                st.warning("⚠️ Binance နှင့် ချိတ်ဆက်မိသော်လည်း လောလောဆယ် ဈေးတင်ထားသူ မတွေ့ပါ။")
         else:
             st.error("Rate ယူရာတွင် အခက်အခဲရှိနေပါသည်။")
             
