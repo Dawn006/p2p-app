@@ -2,79 +2,13 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
-import requests
+import json
+import gspread
+from google.oauth2.service_account import Credentials
 
 # Application Title
 st.set_page_config(page_title="P2P Calculator", page_icon="💰")
 st.title("💸 P2P USDT Profit & Rate Manager")
-
-# ---------------------------------------------------------
-# NEW FEATURE: LIVE BINANCE P2P RATE
-# ---------------------------------------------------------
-st.header("📊 Live Binance P2P Rate (MMK/USDT)")
-
-if st.button("Live Rate ကြည့်မည်"):
-    try:
-        # Binance ဆီကို လှမ်းတောင်းမည့် လိပ်စာ
-        url = "https://p2p.binance.com/bapi/c2c/v2/friendly/c2c/adv/search"
-        
-        # လုံခြုံရေးတံခါးကို ဖြတ်ဖို့ (Browser အစစ်နဲ့ ပိုတူအောင် အချက်အလက်များ ထပ်ဖြည့်ထားသည်)
-        headers = {
-            "authority": "p2p.binance.com",
-            "accept": "application/json, text/plain, */*",
-            "accept-language": "en-US,en;q=0.9",
-            "content-type": "application/json",
-            "origin": "https://p2p.binance.com",
-            "referer": "https://p2p.binance.com/en/trade/all-payments/USDT?fiat=MMK",
-            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-        }
-        
-        # အချက်အလက် ပိုစုံအောင် ပြင်ထားပါသည် (ပထမဆုံး BUY ဖြင့် ရှာမည်)
-        data = {
-            "fiat": "MMK",
-            "page": 1,
-            "rows": 5,
-            "tradeType": "BUY",
-            "asset": "USDT",
-            "countries": [],
-            "proMerchantAds": False,
-            "shieldMerchantAds": False,
-            "filterPicker": [],
-            "payTypes": [],
-            "classifies": ["mass", "profession", "tier1", "tier2"]
-        }
-        
-        # requests ကို သုံးပြီး သွားမေးခြင်း
-        response = requests.post(url, headers=headers, json=data)
-        result = response.json()
-        
-        # ရလာတဲ့ ဒေတာတွေကို စစ်ဆေးခြင်း
-        if result.get('code') == '000000':
-            sellers = result.get('data', [])
-            
-            # အကယ်၍ BUY နဲ့ ရှာလို့ စာရင်းအလွတ်ဖြစ်နေပါက SELL ဖြင့် အလိုအလျောက် ပြောင်းရှာမည်
-            if len(sellers) == 0:
-                data["tradeType"] = "SELL"
-                response = requests.post(url, headers=headers, json=data)
-                result = response.json()
-                sellers = result.get('data', [])
-
-            # နောက်ဆုံးရလာမည့် ဒေတာကို ဖော်ပြခြင်း
-            if len(sellers) > 0:
-                st.success("✅ လက်ရှိ ပေါက်ဈေးများ ရရှိပါပြီ!")
-                for index, seller in enumerate(sellers):
-                    price = seller['adv']['price']
-                    name = seller['advertiser']['nickName']
-                    st.write(f"{index + 1}. **{name}** : `{price}` MMK")
-            else:
-                st.warning("⚠️ Binance ဘက်မှ လောလောဆယ် ဒေတာများ ပိတ်ထားပါသည်။ (Streamlit Cloud ၏ IP ကို လက်မခံခြင်း ဖြစ်နိုင်ပါသည်)")
-        else:
-            st.error("Rate ယူရာတွင် အခက်အခဲရှိနေပါသည်။")
-            
-    except Exception as e:
-        st.warning(f"Connection Error: {e}")
-
-st.divider()
 
 # Step 1: Input from Customer
 st.header("Step 1: Basic Calculation")
@@ -134,10 +68,8 @@ if total_mmk > 0:
         st.write(f"- အိတ်ကပ်ထဲကျန်မည့် အမြတ်: **{profit:,.0f} MMK**")
         st.write(f"- အကြွေပို/လို: **{surplus:,.0f} MMK**")
         
-        st.divider()
-        
         # ---------------------------------------------------------
-        # EXTRA DETAILS FOR EXCEL MATCHING
+        # EXTRA DETAILS FOR EXCEL/SHEETS MATCHING
         # ---------------------------------------------------------
         st.divider()
         st.header("📝 Excel အတွက် အပိုအချက်အလက်များ")
@@ -156,37 +88,47 @@ if total_mmk > 0:
         transferred_usdt = total_usdt - transfer_fee
 
         # ---------------------------------------------------------
-        # SAVE TO HISTORY BUTTON (EXACT EXCEL FORMAT)
+        # SAVE TO GOOGLE SHEETS BUTTON
         # ---------------------------------------------------------
-        st.header("💾 မှတ်တမ်းသိမ်းမည် (Save History)")
-        if st.button("Save to History (CSV သို့ သိမ်းရန်)"):
-            # ပုံထဲကအတိုင်း 26.3.2026 ပုံစံ Date ပြောင်းခြင်း
-            current_date = datetime.now().strftime("%d.%m.%Y")
-            
-            # ဂဏန်းများကို 2.373.250 ပုံစံဖြစ်အောင် ကော်မာအစား အစက်(.) ပြောင်းခြင်း
-            format_mmk = lambda x: f"{x:,.0f}".replace(",", ".")
-            
-            # Prepare the row matching your exact screenshot headers
-            new_record = pd.DataFrame([{
-                "Date": current_date,
-                "Transfer MMK": format_mmk(total_mmk),
-                "USDT": f"{total_usdt} USDT",
-                "MMK": f"{format_mmk(actual_spent)} MMK",
-                " ": col_e_val,  # ခေါင်းစဉ်မပါတဲ့ Column E အတွက်
-                "Rate": col_rate_val,
-                "Exc": exchange_route,
-                "Transfer Fee": transfer_fee,
-                "Transferred USDT": f"{transferred_usdt} USDT",
-                "Leftover MMK": surplus,
-                "Leftover $": leftover_usd,
-                "Profit": f"{profit:,.0f} MMK" if profit > 0 else "0"
-            }])
-            
-            file_name = "p2p_history_exact.csv"
-            
-            if os.path.exists(file_name):
-                new_record.to_csv(file_name, mode='a', header=False, index=False)
-            else:
-                new_record.to_csv(file_name, mode='w', header=True, index=False)
+        st.header("💾 မှတ်တမ်းသိမ်းမည် (Save to Google Sheets)")
+        if st.button("Save to Google Sheets"):
+            try:
+                # 1. Google Sheets နှင့် ချိတ်ဆက်ခြင်း
+                creds_dict = json.loads(st.secrets["GCP_CREDENTIALS"])
+                scopes = [
+                    "https://www.googleapis.com/auth/spreadsheets",
+                    "https://www.googleapis.com/auth/drive"
+                ]
+                creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+                client = gspread.authorize(creds)
                 
-            st.success("✅ မှတ်တမ်းကို **p2p_history_exact.csv** ဖိုင်ထဲသို့ ပုံစံအတိုင်း အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ!")
+                # 2. Google Sheet ကို ဖွင့်ခြင်း (နာမည်အတိအကျဖြစ်ရမည်)
+                sheet = client.open("P2P_History").sheet1
+                
+                # 3. ဒေတာများကို ပုံစံချခြင်း
+                current_date = datetime.now().strftime("%d.%m.%Y")
+                format_mmk = lambda x: f"{x:,.0f}".replace(",", ".")
+                profit_str = f"{profit:,.0f} MMK" if profit > 0 else "0"
+                
+                # 4. အသစ်ထပ်ထည့်မည့် အကြောင်း (Row)
+                row_data = [
+                    current_date, 
+                    format_mmk(total_mmk), 
+                    f"{total_usdt} USDT", 
+                    f"{format_mmk(actual_spent)} MMK", 
+                    col_e_val, 
+                    col_rate_val,
+                    exchange_route, 
+                    transfer_fee, 
+                    f"{transferred_usdt} USDT", 
+                    surplus, 
+                    leftover_usd, 
+                    profit_str
+                ]
+                
+                # 5. Sheet ထဲသို့ ထည့်သွင်းခြင်း
+                sheet.append_row(row_data)
+                
+                st.success("✅ မှတ်တမ်းကို Google Sheets ထဲသို့ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ! မင်းဖုန်းထဲကနေ ဝင်ကြည့်လို့ရပါပြီ။")
+            except Exception as e:
+                st.error(f"Error ဖြစ်နေပါသည်။ (Google Sheet နှင့် ချိတ်ဆက်ရန် Secrets များ ထည့်ထားရန် လိုအပ်သည်): {e}")
