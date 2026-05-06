@@ -116,4 +116,50 @@ with tab1:
 # TAB 2: SELL USDT (USDT to MMK)
 # ---------------------------------------------------------
 with tab2:
-    st.info("USDT to MMK အပိုင်းကိုလည်း အပေါ်က Buy အတိုင်း Sheet Column တွေနဲ့ ချိတ်ဆက်အသုံးပြုနိုင်ပါတယ်။")
+    st.header("Step 1: Basic Calculation (USDT to MMK)")
+    total_usdt_in = st.number_input("Customer ဆီမှ ရရှိသော USDT:", min_value=0.0, step=1.0, format="%.2f", key="sell_input")
+    
+    if total_usdt_in > 0:
+        # ၁.၅% နှုတ်ပြီး P2P မှာ တကယ်ရောင်းမယ့် USDT ကို ရှာမယ်
+        profit_usdt = total_usdt_in * 0.015
+        sellable_usdt = total_usdt_in - profit_usdt
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.success(f"📈 ရရှိမည့် အမြတ် (1.5%): **{profit_usdt:,.2f}** USDT")
+        with col2:
+            st.info(f"💵 P2P တွင် သွားရောင်းရန် အရင်းငွေ: **{sellable_usdt:,.2f}** USDT")
+
+        st.divider()
+        st.header("Step 2: P2P Sell Results")
+        # P2P မှာ ခွဲရောင်းတဲ့ စာရင်းသွင်းဖို့ ဇယား
+        initial_sell_data = pd.DataFrame([{"Buyer": "", "USDT Sold": 0.0, "MMK Received": 0}])
+        edited_sell_df = st.data_editor(initial_sell_data, num_rows="dynamic", use_container_width=True, key="sell_table")
+        
+        actual_usdt_sold = edited_sell_df["USDT Sold"].sum()
+        total_mmk_received = edited_sell_df["MMK Received"].sum()
+        
+        st.write(f"📊 တကယ်ရောင်းလိုက်သော USDT: **{actual_usdt_sold:,.2f}** USDT")
+        st.write(f"📉 စုစုပေါင်းရရှိသော MMK: **{total_mmk_received:,.0f}** MMK")
+
+        # ----- ရောင်းရန်ကျန်ရှိသော USDT ကို တွက်ပြမည့်အပိုင်း -----
+        remaining_usdt = sellable_usdt - actual_usdt_sold
+        
+        if remaining_usdt > 0:
+            st.info(f"⏳ ရောင်းရန် ကျန်ရှိသေးသော USDT: **{remaining_usdt:,.2f}** USDT")
+        elif remaining_usdt == 0 and actual_usdt_sold > 0:
+            st.success(f"✅ အရင်း USDT ကွက်တိကုန်သွားပါပြီ!")
+        elif remaining_usdt < 0:
+            st.error(f"⚠️ သတိထားပါ! အရင်းထက် ပိုရောင်းနေပါသည်။ (ပိုငွေ: **{abs(remaining_usdt):,.2f}** USDT)")
+        # ----------------------------------------------------
+
+        if total_mmk_received > 0:
+            # Customer ကို ပြမည့် Rate ကို တွက်မယ် (ရလာတဲ့ MMK အားလုံးကို Customer ရဲ့ မူလ USDT နဲ့ စားမယ်)
+            customer_rate = total_mmk_received / total_usdt_in
+            
+            st.divider()
+            st.subheader("📤 Summary to Share")
+            sell_summary = f"SUMMARY\n- Total USDT: {total_usdt_in:,.2f}\n- Total MMK to Pay: {total_mmk_received:,.0f}\n- Rate: {customer_rate:,.2f}"
+            st.code(sell_summary)
+            
+            # မှတ်ချက်: Google Sheets ကို သိမ်းတဲ့ Code ကို Buy အပိုင်းကနေ နမူနာယူပြီး ဒီအောက်မှာ ကိုယ်တိုင် စမ်းရေးကြည့်လို့ ရပါတယ်!
