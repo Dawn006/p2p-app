@@ -45,6 +45,18 @@ with tab1:
     st.write(f"📊 စုစုပေါင်းရရှိသော USDT: **{total_usdt:,.2f}** USDT")
     st.write(f"📉 တကယ်ကုန်ကျသော MMK: **{actual_spent:,.0f}** MMK")
 
+    # ----- အသစ်ထပ်ထည့်ရမည့် "ကျန်ရှိငွေ" အပိုင်း -----
+    if total_mmk > 0:
+        remaining_mmk = investable_mmk - actual_spent # အရင်းထဲက သုံးလိုက်တာကို နှုတ်မယ်
+        
+        if remaining_mmk > 0:
+            st.info(f"⏳ USDT ဝယ်ရန် ကျန်ရှိသေးသော ငွေ: **{remaining_mmk:,.0f}** MMK")
+        elif remaining_mmk == 0 and actual_spent > 0:
+            st.success(f"✅ အရင်းငွေ ကွက်တိပြည့်သွားပါပြီ! (ကျန်ငွေ: 0 MMK)")
+        elif remaining_mmk < 0:
+            st.error(f"⚠️ သတိထားပါ! အရင်းငွေထက် ပိုသုံးနေပါသည်။ (ပိုငွေ: **{abs(remaining_mmk):,.0f}** MMK)")
+    # ----------------------------------------------------
+    
     if total_usdt > 0:
         customer_rate = total_mmk / total_usdt
         surplus = investable_mmk - actual_spent
