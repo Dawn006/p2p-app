@@ -154,12 +154,60 @@ with tab2:
         # ----------------------------------------------------
 
         if total_mmk_received > 0:
+            if total_mmk_received > 0:
             # Customer ကို ပြမည့် Rate ကို တွက်မယ် (ရလာတဲ့ MMK အားလုံးကို Customer ရဲ့ မူလ USDT နဲ့ စားမယ်)
             customer_rate = total_mmk_received / total_usdt_in
             
             st.divider()
+            st.header("Step 3: Extra Details (Sheet အတွက်)")
+            
+            # ပုံထဲက Column အစဉ်လိုက်အတိုင်း အကွက်များ ဖန်တီးခြင်း
+            col_e_sell = st.text_input("USDT ခွဲရောင်းခြင်း (Column E):", placeholder="ဥပမာ - 50/48.5", key="sell_col_e")
+            col_f_sell = st.text_input("Rate (Column F):", value=f"{customer_rate:,.2f}", key="sell_col_f")
+            
+            c3, c4 = st.columns(2)
+            with c3:
+                exchange_route_sell = st.selectbox("Exchange (Column G):", ["Binance P2P", "Bitget P2P", "Direct", "Other"], key="sell_exch")
+                transfer_fee_sell = st.number_input("Transfer Fee (MMK - Column H):", min_value=0, step=100, key="sell_fee")
+            with c4:
+                surplus_sell = st.number_input("Surplus အပို/အလို (Column J):", value=0, key="sell_surplus")
+                leftover_sell = st.number_input("Leftover (Column K):", value=0.0, step=0.1, key="sell_leftover")
+
+            # Customer ဆီ တကယ်လွှဲပေးရမယ့်ငွေ (ရလာတဲ့ MMK အားလုံးထဲကမှ လွှဲခကို နုတ်မယ်)
+            transferred_mmk = total_mmk_received - transfer_fee_sell
+
             st.subheader("📤 Summary to Share")
-            sell_summary = f"SUMMARY\n- Total USDT: {total_usdt_in:,.2f}\n- Total MMK to Pay: {total_mmk_received:,.0f}\n- Rate: {customer_rate:,.2f}"
+            sell_summary = f"SUMMARY\n- Total USDT: {total_usdt_in:,.2f}\n- Total MMK to Pay: {transferred_mmk:,.0f}\n- Rate: {customer_rate:,.2f}"
             st.code(sell_summary)
             
-            # မှတ်ချက်: Google Sheets ကို သိမ်းတဲ့ Code ကို Buy အပိုင်းကနေ နမူနာယူပြီး ဒီအောက်မှာ ကိုယ်တိုင် စမ်းရေးကြည့်လို့ ရပါတယ်!
+            # --- GOOGLE SHEETS သိမ်းမည့် အပိုင်း ---
+            if st.button("Save to Google Sheets", key="sell_save_btn"):
+                try:
+                    creds_dict = json.loads(st.secrets["GCP_CREDENTIALS"])
+                    scopes = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+                    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+                    client = gspread.authorize(creds)
+                    
+                    # မှတ်ချက် - မင်းရဲ့ ဖိုင်နာမည်အသစ်ကို ဒီမှာ ပြောင်းထည့်ပါ
+                    sheet_sell = client.open("P2P_Sell_History").sheet1 
+                    
+                    # Sheet ထဲက Column ၁၂ ခုအတိုင်း ကွက်တိစီခြင်း
+                    row_data = [
+                        datetime.now().strftime("%d.%m.%Y"),   # A: Date
+                        f"{total_usdt_in:,.2f} USDT",          # B: Customer USDT
+                        f"{total_mmk_received:,.0f} MMK",      # C: Total MMK
+                        f"{actual_usdt_sold:,.2f} USDT",       # D: Spent USDT
+                        col_e_sell,                            # E: USDT ခွဲရောင်းခြင်း
+                        col_f_sell,                            # F: Rate
+                        exchange_route_sell,                   # G: Exchange
+                        f"{transfer_fee_sell:,.0f}",           # H: Transfer fee (MMK)
+                        f"{transferred_mmk:,.0f} MMK",         # I: Transferred MMK
+                        f"{surplus_sell:,.0f}",                # J: Surplus
+                        f"{leftover_sell:,.2f}",               # K: Leftover
+                        f"{profit_usdt:,.2f} USDT"             # L: Profit (USDT ဖြင့် ဖြတ်ထားသောအမြတ်)
+                    ]
+                    
+                    sheet_sell.append_row(row_data)
+                    st.success("✅ Sell Record ကို Google Sheet ထဲ အောင်မြင်စွာ သိမ်းပြီးပါပြီ!")
+                except Exception as e:
+                    st.error(f"Error: {e}")
