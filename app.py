@@ -52,7 +52,6 @@ with tab1:
         st.divider()
         st.header("Step 3: Extra Details (Sheet အတွက်)")
         
-        # အရင်က ပျောက်သွားတဲ့ အကွက်များ ပြန်ထည့်ခြင်း
         col_e = st.text_input("USDT ခွဲဝယ်မှုများ (Column E):", placeholder="ဥပမာ - 223/34/24")
         col_f = st.text_input("Rate ခွဲဝယ်မှုများ (Column F):", value=f"{customer_rate:,.2f}")
         
@@ -67,7 +66,8 @@ with tab1:
         transferred_usdt = total_usdt - transfer_fee
 
         st.subheader("📤 Summary to Share")
-        summary = f"SUMMARY\n- Total MMK: {total_mmk:,.0f}\n- Total USDT: {total_usdt:,.2f}\n- Rate: {customer_rate:,.2f}"
+        # ဒီနေရာမှာ Total MMK after fees ကို ထပ်ဖြည့်ထားပါတယ်
+        summary = f"SUMMARY\n- Total MMK: {total_mmk:,.0f}\n- Total MMK after fees: {investable_mmk:,.0f}\n- Total USDT: {total_usdt:,.2f}\n- Rate: {customer_rate:,.2f}"
         st.code(summary)
 
         # SAVE BUTTON
@@ -105,4 +105,3 @@ with tab1:
 # ---------------------------------------------------------
 with tab2:
     st.info("USDT to MMK အပိုင်းကိုလည်း အပေါ်က Buy အတိုင်း Sheet Column တွေနဲ့ ချိတ်ဆက်အသုံးပြုနိုင်ပါတယ်။")
-    # (မှတ်ချက်: Sell logic ကိုလည်း လိုအပ်ရင် အပေါ်ကအတိုင်း Column တွေ ဖြည့်ပေးလို့ရပါတယ်)
