@@ -154,7 +154,6 @@ with tab2:
         # ----------------------------------------------------
 
         if total_mmk_received > 0:
-            if total_mmk_received > 0:
             # Customer ကို ပြမည့် Rate ကို တွက်မယ် (ရလာတဲ့ MMK အားလုံးကို Customer ရဲ့ မူလ USDT နဲ့ စားမယ်)
             customer_rate = total_mmk_received / total_usdt_in
             
@@ -188,7 +187,6 @@ with tab2:
                     creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
                     client = gspread.authorize(creds)
                     
-                    # မှတ်ချက် - မင်းရဲ့ ဖိုင်နာမည်အသစ်ကို ဒီမှာ ပြောင်းထည့်ပါ
                     sheet_sell = client.open("P2P_Sell_History").sheet1 
                     
                     # Sheet ထဲက Column ၁၂ ခုအတိုင်း ကွက်တိစီခြင်း
@@ -204,7 +202,7 @@ with tab2:
                         f"{transferred_mmk:,.0f} MMK",         # I: Transferred MMK
                         f"{surplus_sell:,.0f}",                # J: Surplus
                         f"{leftover_sell:,.2f}",               # K: Leftover
-                        f"{profit_usdt:,.2f} USDT"             # L: Profit (USDT ဖြင့် ဖြတ်ထားသောအမြတ်)
+                        f"{profit_usdt:,.2f} USDT"             # L: Profit
                     ]
                     
                     sheet_sell.append_row(row_data)
